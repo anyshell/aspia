@@ -1,0 +1,158 @@
+name: aspia-build
+
+on:
+  push:
+    branches:
+      - anyshell
+
+env:
+  VCPKG_INSTALLED_DIR: ${{ github.workspace }}/builds/ninja-multi-vcpkg-ci/vcpkg_installed
+  VCPKG_ROOT_PROJECT: ${{ github.workspace }}/vcpkg
+  VCPKG_BINARY_SOURCES: 'default,readwrite'
+
+jobs:
+  build-all-matrix:
+    name: ${{ matrix.os }}-${{ matrix.triplet }}-build
+    runs-on: ${{ matrix.os }}
+    #if: ${{ false }}  # disable for now
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: true # true - cancel build on first failed build, false - do not cancel build on errors
+      matrix:
+        os: [ghr-win10] # , ghr-cos7, ghr-osx12
+        arch: [x86] # , x64, arm64
+        include:
+          # - os: ghr-cos7
+          #   arch: x64
+          #   triplet: x64-linux
+          # - os: ghr-cos7
+          #   arch: x86
+          #   triplet: x86-linux
+
+          # - os: ghr-osx12
+          #   arch: x64
+          #   triplet: x64-osx
+          # - os: ghr-osx12
+          #   arch: arm64
+          #   triplet: arm64-osx
+
+          # - os: ghr-win10
+          #   arch: x64
+          #   triplet: x64-windows-static
+          - os: ghr-win10
+            arch: x86
+            triplet: x86-windows-static
+          # - os: ghr-win10
+          #   arch: amd64_arm64
+          #   triplet: arm64-windows-static
+
+        exclude:
+          # - os: ghr-cos7
+          #   arch: arm64
+          # - os: ghr-cos7
+          #   arch: x86
+
+          # - os: ghr-osx12
+          #   arch: x86
+
+          # - os: ghr-win10
+          #   arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: false
+
+      # Separate task to checkout submodule because it requires another ssh key
+      - name: Checkout submodule vcpkg
+        uses: actions/checkout@v2
+        with:
+          repository: anyshell/vcpkg
+          path: vcpkg
+          ref: anyshell
+          ssh-key: ${{ secrets.SSH_KEY }}
+          persist-credentials: false
+
+      #- name: Dump env and context
+      #  run: |
+      #    echo '${{ toJSON(github) }}'
+      #    env
+
+      # Run CMake to generate Ninja project files, using the vcpkg's toolchain file to resolve and install the dependencies as specified in vcpkg.json.
+      - name: Dependencies, build, run tests (Unix/Bash)
+        if: runner.os != 'Windows'
+        env:
+          # this vars used inside CMake
+          VCPKG_DEFAULT_BINARY_CACHE: /opt/vcpkg/bincache-${{ matrix.triplet }}
+          VCPKG_TRIPLET: ${{ matrix.triplet }}
+          VCPKG_DOWNLOADS: /opt/vcpkg/downloads
+        run: |
+          # reuired to prevent override by MSVC for e.g. on Win
+          export VCPKG_ROOT=$VCPKG_ROOT_PROJECT
+          env
+
+          if [ -z "${{ matrix.triplet }}" ]; then
+            echo "VCPKG_TRIPLET is empty"
+            exit 1
+          fi
+
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            # this is for alternate github actions runner
+            echo "Disable this step for current OS"
+            exit 0
+          fi
+
+          # need to backup vcpkg executable to prevent it's rebuild/redownload each time
+          if [ -f $VCPKG_DEFAULT_BINARY_CACHE/vcpkg.bak ]; then
+            echo "Restore vcpkg executable"
+            cp $VCPKG_DEFAULT_BINARY_CACHE/vcpkg.bak vcpkg/vcpkg
+          fi
+
+          mkdir -p $VCPKG_DEFAULT_BINARY_CACHE
+          mkdir -p $VCPKG_DOWNLOADS
+          cmake --preset ninja-multi-vcpkg-ci # build vcpkg dependencies
+          cmake --build --preset ninja-multi-vcpkg-ci-release # build project
+          #ctest --preset ninja-multi-vcpkg-ci-release
+
+          # need to backup vcpkg executable to prevent it's rebuild/redownload each time
+          if [ -f vcpkg/vcpkg ]; then
+            echo "Backup vcpkg executable"
+            cp vcpkg/vcpkg $VCPKG_DEFAULT_BINARY_CACHE/vcpkg.bak
+          fi
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - name: Set MSVC / x64 parameters
+        uses: ilammy/msvc-dev-cmd@v1
+        if: ${{ runner.os == 'Windows' && matrix.arch != 'amd64_arm64' }}
+        with:
+          arch: ${{ matrix.arch }}
+          toolset: 14.29 # v142 check on your build machine in the 'C:\Program Files\Microsoft Visual Studio\...\VC\Tools\MSVC'
+
+      - name: Set MSVC / arm64 parameters
+        uses: ilammy/msvc-dev-cmd@v1
+        if: ${{ runner.os == 'Windows' && matrix.arch == 'amd64_arm64' }}
+        with:
+          arch: ${{ matrix.arch }}
+          toolset: 14.37 # v143 check on your build machine in the 'C:\Program Files\Microsoft Visual Studio\...\VC\Tools\MSVC'
+
+      - name: Dependencies, build, run tests (Windows/PSh)
+        if: runner.os == 'Windows' 
+        env:
+          # this vars used inside CMake
+          VCPKG_DEFAULT_BINARY_CACHE: C:\vcpkg\bincache-${{ matrix.triplet }}
+          VCPKG_TRIPLET: ${{ matrix.triplet }}
+          VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+          VCPKG_DOWNLOADS: C:\vcpkg\downloads
+        run: |
+          # reuired to prevent override by MSVC for e.g. on Win
+          $env:VCPKG_ROOT=$env:VCPKG_ROOT_PROJECT
+          Get-ChildItem env:
+
+          if (!$env:VCPKG_TRIPLET) { echo "VCPKG_TRIPLET is empty"; exit 1; }
+
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_DOWNLOADS
+          cmake --preset ninja-multi-vcpkg-ci # build vcpkg dependencies
+          cmake --build --preset ninja-multi-vcpkg-ci-release # build project
+          #ctest --preset ninja-multi-vcpkg-ci-release
