@@ -3,7 +3,7 @@ name: aspia-build
 on:
   push:
     branches:
-      - main
+      - anyshell
 
 env:
   VCPKG_INSTALLED_DIR: ${{ github.workspace }}/builds/ninja-multi-vcpkg-ci/vcpkg_installed
