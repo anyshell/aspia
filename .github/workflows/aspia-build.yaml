@@ -20,42 +20,42 @@ jobs:
     strategy:
       fail-fast: true # true - cancel build on first failed build, false - do not cancel build on errors
       matrix:
-        os: [ghr-cos7, ghr-win10, ghr-osx12]
-        arch: [x64, x86, arm64]
+        os: [ghr-win10] # , ghr-cos7, ghr-osx12
+        arch: [x64] # , x86, arm64
         include:
-          - os: ghr-cos7
-            arch: x64
-            triplet: x64-linux
-          - os: ghr-cos7
-            arch: x86
-            triplet: x86-linux
+          # - os: ghr-cos7
+          #   arch: x64
+          #   triplet: x64-linux
+          # - os: ghr-cos7
+          #   arch: x86
+          #   triplet: x86-linux
 
-          - os: ghr-osx12
-            arch: x64
-            triplet: x64-osx
-          - os: ghr-osx12
-            arch: arm64
-            triplet: arm64-osx
+          # - os: ghr-osx12
+          #   arch: x64
+          #   triplet: x64-osx
+          # - os: ghr-osx12
+          #   arch: arm64
+          #   triplet: arm64-osx
 
           - os: ghr-win10
             arch: x64
             triplet: x64-windows-static
-          - os: ghr-win10
-            arch: x86
-            triplet: x86-windows-static
-          - os: ghr-win10
-            arch: amd64_arm64
-            triplet: arm64-windows-static
+          # - os: ghr-win10
+          #   arch: x86
+          #   triplet: x86-windows-static
+          # - os: ghr-win10
+          #   arch: amd64_arm64
+          #   triplet: arm64-windows-static
 
-        exclude:
-          - os: ghr-cos7
-            arch: arm64
+        # exclude:
+        #   - os: ghr-cos7
+        #     arch: arm64
 
-          - os: ghr-osx12
-            arch: x86
+        #   - os: ghr-osx12
+        #     arch: x86
 
-          - os: ghr-win10
-            arch: arm64
+        #   - os: ghr-win10
+        #     arch: arm64
 
     steps:
       - name: Checkout
