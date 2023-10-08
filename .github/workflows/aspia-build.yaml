@@ -13,7 +13,6 @@ env:
 
 jobs:
   build-all-matrix:
-    needs: [cleanup-storage]
     name: ${{ matrix.os }}-${{ matrix.triplet }}-build
     runs-on: ${{ matrix.os }}
     #if: ${{ false }}  # disable for now
