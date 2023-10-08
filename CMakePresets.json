@@ -32,7 +32,7 @@
       "environment": {
         "VCPKG_ROOT": "${sourceDir}/vcpkg",
         "VCPKG_BINARY_SOURCES": "default,readwrite",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/builds/${presetName}/vcpkg_installed",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/builds/${presetName}/vcpkg_installed"
       }
     },
     {
