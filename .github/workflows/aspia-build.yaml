@@ -9,7 +9,6 @@ env:
   VCPKG_INSTALLED_DIR: ${{ github.workspace }}/builds/ninja-multi-vcpkg-ci/vcpkg_installed
   VCPKG_ROOT_PROJECT: ${{ github.workspace }}/vcpkg
   VCPKG_BINARY_SOURCES: 'default,readwrite'
-  BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   build-all-matrix:
@@ -21,7 +20,7 @@ jobs:
       fail-fast: true # true - cancel build on first failed build, false - do not cancel build on errors
       matrix:
         os: [ghr-win10] # , ghr-cos7, ghr-osx12
-        arch: [x64] # , x86, arm64
+        arch: [x86] # , x64, arm64
         include:
           # - os: ghr-cos7
           #   arch: x64
@@ -37,25 +36,27 @@ jobs:
           #   arch: arm64
           #   triplet: arm64-osx
 
-          - os: ghr-win10
-            arch: x64
-            triplet: x64-windows-static
           # - os: ghr-win10
-          #   arch: x86
-          #   triplet: x86-windows-static
+          #   arch: x64
+          #   triplet: x64-windows-static
+          - os: ghr-win10
+            arch: x86
+            triplet: x86-windows-static
           # - os: ghr-win10
           #   arch: amd64_arm64
           #   triplet: arm64-windows-static
 
-        # exclude:
-        #   - os: ghr-cos7
-        #     arch: arm64
+        exclude:
+          # - os: ghr-cos7
+          #   arch: arm64
+          # - os: ghr-cos7
+          #   arch: x86
 
-        #   - os: ghr-osx12
-        #     arch: x86
+          # - os: ghr-osx12
+          #   arch: x86
 
-        #   - os: ghr-win10
-        #     arch: arm64
+          # - os: ghr-win10
+          #   arch: arm64
 
     steps:
       - name: Checkout
